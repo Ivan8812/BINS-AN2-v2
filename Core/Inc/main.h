@@ -57,6 +57,13 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define uart_gnss huart11
+#define uart_mti huart2
+#define uart_232 huart4
+#define uart_485 huart5
+#define uart_422 huart6
+#define i2c_bmp hi2c1
+#define i2c_temp hi2c2
 #define RST_IMU_Pin GPIO_PIN_2
 #define RST_IMU_GPIO_Port GPIOC
 #define SYNC_IMU_Pin GPIO_PIN_3

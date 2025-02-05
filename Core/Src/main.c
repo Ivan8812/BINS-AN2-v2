@@ -31,7 +31,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "os.h"
+#include "app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -110,10 +110,7 @@ int main(void)
   MX_FLASH_Init();
   MX_ICACHE_Init();
   /* USER CODE BEGIN 2 */
-  HAL_GPIO_WritePin(ANT_PWR_EN_GPIO_Port, ANT_PWR_EN_Pin, GPIO_PIN_SET);
-
-
-  os_run();
+  app_run();
 
 
   /* USER CODE END 2 */
