@@ -23,7 +23,8 @@ float air_speed(float pres)
 	if(tmp >= 0.0f)
 		return Ks*sqrtf(tmp);
 	else
-		return -Ks*sqrtf(-tmp);
+		//return -Ks*sqrtf(-tmp);
+	  return 0.0f;
 }
 
 float vert_speed(float pres, float dpdt)

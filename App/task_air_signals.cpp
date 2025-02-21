@@ -41,6 +41,13 @@ void task_func_air_signals(void *arg)
   xTimerStart(timer, 0);
 
   float prev_stat_pres = 0.0f;
+  bins_status_t prev_bins_status = {.raw = bins_status.raw};
+  struct
+  {
+    float stat_sum = 0.0f, full_sum = 0.0f;
+    uint32_t stat_n = 0, full_n = 0;
+    float offset = 0.0f;
+  } calibr;
   for(;;)
   {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -48,8 +55,37 @@ void task_func_air_signals(void *arg)
     BMP390::out_t val_full, val_stat;
     bins_status.stat_pres_ok = bmp390_full.get(val_full) ? 1 : 0;
     bins_status.full_pres_ok = bmp390_stat.get(val_stat) ? 1 : 0;
-    float alt = 0.0f, vspeed = 0.0f, ias = 0.0f;
 
+    // self calibration
+    if(bins_status.bins_self_test)
+    {
+      bins_status.air_calibr_active = 1;
+      if(bins_status.stat_pres_ok)
+      {
+        calibr.stat_sum += val_stat.pres;
+        calibr.stat_n++;
+      }
+      if(bins_status.stat_pres_ok)
+      {
+        calibr.full_sum += val_full.pres;
+        calibr.full_n++;
+      }
+    }
+    else if(prev_bins_status.bins_self_test)
+    {
+      if(calibr.full_n && calibr.stat_n)
+      {
+        calibr.offset = calibr.full_sum/(float)calibr.full_n - calibr.stat_sum/(float)calibr.stat_n;
+        calibr.full_n = calibr.stat_n = 0;
+        calibr.full_sum = calibr.stat_sum = 0.0f;
+        bins_status.air_calibr_ok = 1;
+      }
+      bins_status.air_calibr_active = 0;
+    }
+    prev_bins_status.raw = bins_status.raw;
+
+    // main calculations
+    float alt = 0.0f, vspeed = 0.0f, ias = 0.0f;
     if(bins_status.stat_pres_ok)
     {
       alt = altitude(val_stat.pres);
@@ -58,16 +94,34 @@ void task_func_air_signals(void *arg)
 
       if(bins_status.full_pres_ok)
       {
-        ias = air_speed(val_full.pres - val_stat.pres);
+        ias = air_speed(val_full.pres - val_stat.pres - calibr.offset)/3.6f;
       }
     }
 
-    can_send_val(CAN_VAL_PRES_STAT, val_stat.pres, bins_status.stat_pres_ok, false, false);
-    can_send_val(CAN_VAL_PRES_FULL, val_full.pres, bins_status.full_pres_ok, false, false);
-    can_send_val(CAN_VAL_PRES_DYN, val_full.pres - val_stat.pres, bins_status.stat_pres_ok && bins_status.full_pres_ok, false, false);
-    can_send_val(CAN_VAL_BARO_HEIGHT, alt, bins_status.stat_pres_ok, false, false);
-    can_send_val(CAN_VAL_VERT_SPEED, vspeed, bins_status.stat_pres_ok, false, false);
-    can_send_val(CAN_VAL_IND_AIRSPEED, ias, bins_status.stat_pres_ok && bins_status.full_pres_ok, false, false);
+    // send data out
+    static can_msg_position_t can_msg_height = {.value=0, .quality=CAN_POS_QUAL_STANDALONE, .cntr=0, .state ={.raw=0x0}};
+    can_msg_height.value = (int32_t)(alt*1000.0);
+    can_msg_height.state.bins_ok = bins_status.bins_ok;
+    can_msg_height.state.valid = bins_status.stat_pres_ok;
+    if(bins_status.bins_standalone)
+    {
+      can_send_val(CAN_VAL_BINS2_PRES_STAT, val_stat.pres, bins_status.stat_pres_ok, false, false);
+      can_send_val(CAN_VAL_BINS2_PRES_FULL, val_full.pres, bins_status.full_pres_ok, false, false);
+      can_send_val(CAN_VAL_BINS2_PRES_DYN, val_full.pres - val_stat.pres, bins_status.stat_pres_ok && bins_status.full_pres_ok, false, false);
+      can_send_val(CAN_VAL_BINS2_VERT_SPEED, vspeed, bins_status.stat_pres_ok, false, false);
+      can_send_val(CAN_VAL_BINS2_IND_AIRSPEED, ias, bins_status.stat_pres_ok && bins_status.full_pres_ok, false, false);
+      can_send_dat(CAN_MSG_BINS2_BARO_HEIGHT, &can_msg_height, sizeof(can_msg_height));
+    }
+    else
+    {
+      can_send_val(CAN_VAL_BINS1_PRES_STAT, val_stat.pres, bins_status.stat_pres_ok, false, false);
+      can_send_val(CAN_VAL_BINS1_PRES_FULL, val_full.pres, bins_status.full_pres_ok, false, false);
+      can_send_val(CAN_VAL_BINS1_PRES_DYN, val_full.pres - val_stat.pres, bins_status.stat_pres_ok && bins_status.full_pres_ok, false, false);
+      can_send_val(CAN_VAL_BINS1_VERT_SPEED, vspeed, bins_status.stat_pres_ok, false, false);
+      can_send_val(CAN_VAL_BINS1_IND_AIRSPEED, ias, bins_status.stat_pres_ok && bins_status.full_pres_ok, false, false);
+      can_send_dat(CAN_MSG_BINS1_BARO_HEIGHT, &can_msg_height, sizeof(can_msg_height));
+    }
+    can_msg_height.cntr++;
 
 #if RS422_LOG_OUT
     opack_air_t pack;

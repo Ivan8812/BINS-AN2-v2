@@ -4,9 +4,7 @@
 #include <optional>
 #include <BE.h>
 #include <AHRS.h>
-#if RS422_LOG_OUT
-#include <packets.h>
-#endif
+
 
 
 using namespace std;
@@ -60,7 +58,7 @@ using be_hdr_t = struct
 //-------------------------------------
 enum
 {
-	MTD_ANG  = 0x2034,
+	MTD_ANG  = 0x2038,
 	MTD_STAT = 0xE020,
 	MTD_CNTR = 0x1020,
 	MTD_TIME = 0x1060,
@@ -72,16 +70,13 @@ enum
 //-------------------------------------
 enum
 {
-	RATE_IMU  = 100,
+	RATE_IMU  = 50,
 	RATE_TEMP = 1,
 };
 //-------------------------------------
 
 //-----------------------------------------------
 
-#if USE_MTI_ICC
-static void hnd_icc(void* data, const uint16_t len);
-#endif
 static void hnd_mtd(void* data, const uint16_t len);
 
 initializer_list<MTI::cfg_t> mti_cfg =
@@ -107,7 +102,7 @@ void task_func_mti(void *argument)
 
   for(;;)
   {
-    if(ulTaskNotifyTake(pdTRUE, 5000))
+    if(ulTaskNotifyTake(pdTRUE, 500))
       mti.parse_inbox();
     else
     {
@@ -127,32 +122,6 @@ void task_func_mti(void *argument)
 //------------------------------------------------------------------------------
 
 
-//------------------------------------------------------------------------------
-#if USE_MTI_ICC
-void hnd_icc(void* data, const uint16_t len)
-{
-	uint8_t cmd = *((uint8_t*)data);
-	void* payload_be = (void*)((uint32_t)data + sizeof(cmd));
-
-	if(cmd == MTI_Uart::ICC_STOP)
-	{
-		using result_be_t = struct{fbe32_t ddt; uint8_t dim; uint8_t status;};
-		result_be_t* result = ((result_be_t*)payload_be);
-		can_icc_result_t pack;
-		pack.ddt = result->ddt;
-		pack.dim = result->dim;
-		pack.status = result->status;
-		can_send_dat(CAN_MSG_RESULT, &pack, sizeof(pack));
-	}
-	else if(cmd == MTI_Uart::ICC_GET_STATE)
-	{
-		can_icc_state_t state = *((uint8_t*)payload_be);
-		can_send_dat(CAN_MSG_STATE, &state, sizeof(state));
-	}
-}
-#endif
-//------------------------------------------------------------------------------
-
 
 //------------------------------------------------------------------------------
 void hnd_mtd(void *mtdata, const uint16_t len)
@@ -160,7 +129,9 @@ void hnd_mtd(void *mtdata, const uint16_t len)
   using namespace Eigen;
 
   uint32_t status=0;
+#if RS422_LOG_OUT
   uint32_t rec_time = systime;
+#endif
   optional<be_ang_t> be_ang;
   optional<be_acc_t> be_acc;
   optional<be_gyr_t> be_gyr;
@@ -204,18 +175,33 @@ void hnd_mtd(void *mtdata, const uint16_t len)
   static uint32_t prev_status = 0x0;
   if(((prev_status & 0x3) == 0x1) && ((status & 0x3) == 0x3))
   {
-    bins_status.bins_self_test_ok = true;
+    //bins_status.bins_self_test_ok = true;
     mti.set_no_rotation(1);
     //ahrs.set_no_rotation(1);
   }
   prev_status = status;
-  can_send_dat(CAN_MTI_STATUS, &status,  sizeof(status));
+
+  if(bins_status.bins_standalone)
+    can_send_dat(CAN_MTI_BINS2_STATUS, &status,  sizeof(status));
+  else
+    can_send_dat(CAN_MTI_BINS1_STATUS, &status,  sizeof(status));
 
   if(be_ang)
   {
-    can_send_val(CAN_VAL_ROLL, be_ang->roll, bins_status.mti_ok, false, false);
-    can_send_val(CAN_VAL_PITCH, be_ang->pitch, bins_status.mti_ok, false, false);
-    can_send_val(CAN_VAL_HEADING, be_ang->yaw, bins_status.mti_ok, false, false);
+    be_ang->pitch = -be_ang->pitch;
+    be_ang->yaw = -be_ang->yaw;
+    if(bins_status.bins_standalone)
+    {
+      can_send_val(CAN_VAL_BINS2_ROLL, be_ang->roll, bins_status.mti_ok, false, false);
+      can_send_val(CAN_VAL_BINS2_PITCH, be_ang->pitch, bins_status.mti_ok, false, false);
+      can_send_val(CAN_VAL_BINS2_HEADING, be_ang->yaw, bins_status.mti_ok, false, false);
+    }
+    else
+    {
+      can_send_val(CAN_VAL_BINS1_ROLL, be_ang->roll, bins_status.mti_ok, false, false);
+      can_send_val(CAN_VAL_BINS1_PITCH, be_ang->pitch, bins_status.mti_ok, false, false);
+      can_send_val(CAN_VAL_BINS1_HEADING, be_ang->yaw, bins_status.mti_ok, false, false);
+    }
   }
 
 #if RS422_LOG_OUT
@@ -237,19 +223,11 @@ void hnd_mtd(void *mtdata, const uint16_t len)
     pack.mag_y = be_mag->y;
     pack.mag_z = be_mag->z;
 
-    uint32_t t1 = DWT->CYCCNT;
     Vector3f acc({ pack.acc_x, pack.acc_y, pack.acc_z});
     Vector3f gyr({ pack.gyr_x, pack.gyr_y, pack.gyr_z});
     Vector3f mag({ pack.mag_x, pack.mag_y, pack.mag_z});
     acc /= -9.81f;
     //ahrs.step(acc, gyr, mag);
-    auto eul = ahrs.current_euler();
-    uint32_t t2 = DWT->CYCCNT;
-    pack.roll2 = eul[0];
-    pack.pitch2 = eul[1];
-    pack.heading2 = eul[2];
-    pack.ticks = t2-t1;
-
     //can_send_val(CAN_VAL_ROLL, eul[0], bins_status.mti_ok, false, false);
     //can_send_val(CAN_VAL_PITCH, eul[1], bins_status.mti_ok, false, false);
     //can_send_val(CAN_VAL_YAW, eul[2], bins_status.mti_ok, false, false);
