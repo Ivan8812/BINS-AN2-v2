@@ -58,7 +58,7 @@ using be_hdr_t = struct
 //-------------------------------------
 enum
 {
-	MTD_ANG  = 0x2038,
+	MTD_ANG  = 0x2034,
 	MTD_STAT = 0xE020,
 	MTD_CNTR = 0x1020,
 	MTD_TIME = 0x1060,
@@ -188,8 +188,8 @@ void hnd_mtd(void *mtdata, const uint16_t len)
 
   if(be_ang)
   {
-    be_ang->pitch = -be_ang->pitch;
-    be_ang->yaw = -be_ang->yaw;
+    //be_ang->pitch = -be_ang->pitch;
+    //be_ang->yaw = -be_ang->yaw;
     if(bins_status.bins_standalone)
     {
       can_send_val(CAN_VAL_BINS2_ROLL, be_ang->roll, bins_status.mti_ok, false, false);

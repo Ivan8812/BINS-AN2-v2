@@ -87,6 +87,25 @@ bool MTI::set_no_rotation(uint16_t sec)
 }
 //------------------------------------------------------------------------------
 
+
+//------------------------------------------------------------------------------
+bool MTI::set_alignment(float qw, float qx, float qy, float qz)
+{
+#pragma pack(push, 1)
+  struct
+  {
+    uint8_t mode;
+    BE<float> qw;
+    BE<float> qx;
+    BE<float> qy;
+    BE<float> qz;
+  } alignment = {0x0, qw, qx, qy, qz};
+#pragma pack(push, 1)
+  return send_pack(MID_SET_ALIGN, &alignment, sizeof(alignment));
+}
+//------------------------------------------------------------------------------
+
+
 //------------------------------------------------------------------------------
 void MTI::parse_inbox()
 {
@@ -239,6 +258,8 @@ void MTI::process_pack(uint8_t mid, const uint16_t len)
 			break;
 		case CONFIG:
 			if (mid == (MID_CONFIG + 1))
+			  set_alignment(0, 1, 0, 0);
+			else if(mid == (MID_SET_ALIGN+1))
 				set_profile(PROF_HIGH_MAG);
 			else if (mid ==(MID_SET_PROFILE+1))
 				send_pack(MID_GOTOMEASURE);

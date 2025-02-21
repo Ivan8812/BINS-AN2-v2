@@ -52,6 +52,7 @@ protected:
 		MID_MTDATA = 0x36,
 		MID_SET_PROFILE = 0x64,
 		MID_SET_NO_ROT = 0x22,
+		MID_SET_ALIGN = 0xEC,
 	};
 	enum
 	{
@@ -68,6 +69,7 @@ protected:
 	bool send_pack(uint8_t mid, const void* payload = nullptr, const uint16_t len=0);
 	bool send_cmd(uint8_t mid, const void* payload = nullptr, uint16_t len=0, handler_t = nullptr, uint32_t timeout = MaxTimeout);
 	bool set_profile(uint16_t prof);
+	bool set_alignment(float qw, float qx, float qy, float qz);
 
 private:
 	MTI(const MTI &other) = delete;
@@ -92,7 +94,6 @@ private:
 	volatile uint32_t cmd_timeout = 0;
 
 	void process_pack(uint8_t mid, const uint16_t len);
-
 	virtual bool write(void* data, uint32_t len) = 0;
 	virtual void on_warning() {}
 };
