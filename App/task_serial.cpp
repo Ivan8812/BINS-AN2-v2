@@ -19,7 +19,7 @@ using namespace std;
 
 
 //------------------------------------------------------------------------------
-void task_func_rs422(void *arg)
+void task_func_serial(void *arg)
 {
   for(;;)
   {
@@ -51,9 +51,9 @@ void stat_handler(const void* payload, const uint8_t len)
 //------------------------------------------------------------------------------
 void mode_handler(const void* payload, const uint8_t len)
 {
-	rs422_mode = *((uint8_t*)payload) & 0x3;
+	serial_mode = *((uint8_t*)payload) & 0x3;
 
-	if(rs422_mode == RS422_MTI_BRIDGE)
+	if(serial_mode == SERIAL_MTI_BRIDGE)
 	{
 		HAL_GPIO_WritePin(ANT_PWR_EN_GPIO_Port, ANT_PWR_EN_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(RST_IMU_GPIO_Port, RST_IMU_Pin, GPIO_PIN_RESET);

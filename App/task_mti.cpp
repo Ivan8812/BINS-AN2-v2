@@ -129,7 +129,7 @@ void hnd_mtd(void *mtdata, const uint16_t len)
   using namespace Eigen;
 
   uint32_t status=0;
-#if RS422_LOG_OUT
+#if SERIAL_LOG_OUT
   uint32_t rec_time = systime;
 #endif
   optional<be_ang_t> be_ang;
@@ -204,7 +204,7 @@ void hnd_mtd(void *mtdata, const uint16_t len)
     }
   }
 
-#if RS422_LOG_OUT
+#if SERIAL_LOG_OUT
   if(be_ang && be_acc && be_gyr && be_mag)
   {
     opack_imu_t pack;
@@ -236,7 +236,7 @@ void hnd_mtd(void *mtdata, const uint16_t len)
   }
 #endif
 
-#if RS422_LOG_OUT
+#if SERIAL_LOG_OUT
   if(be_temp)
   {
     opack_temp_t pack;

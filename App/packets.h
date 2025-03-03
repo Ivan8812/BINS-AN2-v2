@@ -97,7 +97,7 @@ typedef struct
 
 
 //---------------------------
-#define PID_GNSS          0x23
+#define PID_GNSS_POS      0x23
 typedef struct
 {
   uint32_t systime;
@@ -106,7 +106,7 @@ typedef struct
   int32_t lon;
   int32_t alt;
   uint8_t quality;
-} opack_gnss_t;
+} opack_gnss_pos_t;
 //---------------------------
 
 
@@ -117,6 +117,31 @@ typedef struct
   uint32_t systime;
   float temp;
 } opack_temp_t;
+//---------------------------
+
+
+//---------------------------
+#define PID_GNSS_ATT      0x25
+typedef struct
+{
+  uint32_t systime;
+  float timestamp;
+  int32_t heading;
+  int32_t pitch;
+  int32_t roll;
+  uint8_t quality;
+} opack_gnss_att_t;
+//---------------------------
+
+
+//---------------------------
+#define PID_GNSS_SPEED    0x26
+typedef struct
+{
+  uint32_t systime;
+  int32_t ground_speed;
+  uint8_t quality;
+} opack_gnss_speed_t;
 //---------------------------
 
 

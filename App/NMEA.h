@@ -18,7 +18,7 @@ public:
       BROKEN_NMEA_STRING
   };
 
-  static constexpr uint32_t MAX_NMEA_LENGTH = 82;
+  static constexpr uint32_t MAX_LENGTH = 91;
 
   NMEA() { reset(); }
 
@@ -28,6 +28,12 @@ public:
   {
     switch (state)
     {
+    case NMEA_RECEIVED:
+    case BROKEN_NMEA_STRING:
+    default:
+      state = WAIT_FOR_START_BYTE;
+      [[fallthrough]];
+
     case WAIT_FOR_START_BYTE:
       if (c == '$')
       {
@@ -39,7 +45,7 @@ public:
       break;
 
     case RECEIVING_BODY:
-      if (pos >= MAX_NMEA_LENGTH)
+      if (pos >= MAX_LENGTH)
       {
         state = BROKEN_NMEA_STRING;
         pos = 0;
@@ -60,7 +66,7 @@ public:
       break;
 
     case RECEIVING_CHECKSUM_HIGH:
-      if (pos >= MAX_NMEA_LENGTH)
+      if (pos >= MAX_LENGTH)
       {
         state = BROKEN_NMEA_STRING;
         pos = 0;
@@ -83,7 +89,7 @@ public:
       break;
 
     case RECEIVING_CHECKSUM_LOW:
-      if (pos >= MAX_NMEA_LENGTH)
+      if (pos >= MAX_LENGTH)
       {
         state = BROKEN_NMEA_STRING;
         pos = 0;
@@ -106,7 +112,7 @@ public:
       break;
 
     case WAIT_FOR_END:
-      if (pos >= MAX_NMEA_LENGTH)
+      if (pos >= MAX_LENGTH)
       {
         state = BROKEN_NMEA_STRING;
         pos = 0;
@@ -131,22 +137,21 @@ public:
         pos = 0;
       }
       break;
-
-    case NMEA_RECEIVED:
-    case BROKEN_NMEA_STRING:
-    default:
-      // После завершения приема или ошибки, следующий входной символ приводит к сбросу автомата.
-      reset();
-      break;
     }
     return state;
   }
 
   // Возвращает принятое сообщение в виде C-строки
-  const char* get_message() const { return buffer; }
+  uint32_t get_message(char* msg) const
+  {
+    if((state != NMEA_RECEIVED) || (msg == nullptr))
+      return 0;
 
-  // Возвращает длину принятого сообщения
-  uint32_t get_message_length() const { return pos; }
+    for(uint32_t i=0; i<pos; i++)
+      msg[i] = buffer[i];
+    return pos;
+  }
+
 
   // Сброс автомата в исходное состояние
   void reset()
@@ -172,7 +177,7 @@ private:
 
   state_t state;           // Текущее состояние автомата
   uint32_t pos;           // Текущая позиция в буфере
-  char buffer[MAX_NMEA_LENGTH + 1]; // Фиксированный буфер (+1 для завершающего нуля)
+  char buffer[MAX_LENGTH + 1]; // Фиксированный буфер (+1 для завершающего нуля)
 
   // Переменные для вычисления контрольной суммы "на лету"
   uint8_t running_checksum;   // Вычисляемая XOR контрольная сумма (символы между '$' и '*')

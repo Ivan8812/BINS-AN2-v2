@@ -99,10 +99,6 @@ void task_func_air_signals(void *arg)
     }
 
     // send data out
-    static can_msg_position_t can_msg_height = {.value=0, .quality=CAN_POS_QUAL_STANDALONE, .cntr=0, .state ={.raw=0x0}};
-    can_msg_height.value = (int32_t)(alt*1000.0);
-    can_msg_height.state.bins_ok = bins_status.bins_ok;
-    can_msg_height.state.valid = bins_status.stat_pres_ok;
     if(bins_status.bins_standalone)
     {
       can_send_val(CAN_VAL_BINS2_PRES_STAT, val_stat.pres, bins_status.stat_pres_ok, false, false);
@@ -110,7 +106,7 @@ void task_func_air_signals(void *arg)
       can_send_val(CAN_VAL_BINS2_PRES_DYN, val_full.pres - val_stat.pres, bins_status.stat_pres_ok && bins_status.full_pres_ok, false, false);
       can_send_val(CAN_VAL_BINS2_VERT_SPEED, vspeed, bins_status.stat_pres_ok, false, false);
       can_send_val(CAN_VAL_BINS2_IND_AIRSPEED, ias, bins_status.stat_pres_ok && bins_status.full_pres_ok, false, false);
-      can_send_dat(CAN_MSG_BINS2_BARO_HEIGHT, &can_msg_height, sizeof(can_msg_height));
+      can_send_val(CAN_VAL_BINS2_BARO_HEIGHT, alt, bins_status.stat_pres_ok, false, false);
     }
     else
     {
@@ -119,11 +115,10 @@ void task_func_air_signals(void *arg)
       can_send_val(CAN_VAL_BINS1_PRES_DYN, val_full.pres - val_stat.pres, bins_status.stat_pres_ok && bins_status.full_pres_ok, false, false);
       can_send_val(CAN_VAL_BINS1_VERT_SPEED, vspeed, bins_status.stat_pres_ok, false, false);
       can_send_val(CAN_VAL_BINS1_IND_AIRSPEED, ias, bins_status.stat_pres_ok && bins_status.full_pres_ok, false, false);
-      can_send_dat(CAN_MSG_BINS1_BARO_HEIGHT, &can_msg_height, sizeof(can_msg_height));
+      can_send_val(CAN_VAL_BINS1_BARO_HEIGHT, alt, bins_status.stat_pres_ok, false, false);
     }
-    can_msg_height.cntr++;
 
-#if RS422_LOG_OUT
+#if SERIAL_LOG_OUT
     opack_air_t pack;
     pack.systime = systime;
     pack.pres_stat = val_stat.pres;

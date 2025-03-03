@@ -1,11 +1,7 @@
 #include <BMP390.h>
 
-#if BMP_DEBUG
-  #include "rs422_port.h"
-	#define debug_print rs422_printf
-#else
-	static void debug_print(const char* fmt...) {}
-#endif
+#define debug_print(...)
+
 
 using namespace std;
 

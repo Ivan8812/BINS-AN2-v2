@@ -1,6 +1,6 @@
 #pragma once
 
-#define RS422_LOG_OUT 1
+#define SERIAL_LOG_OUT 1
 
 #ifdef __cplusplus
 extern "C"
@@ -17,7 +17,7 @@ extern "C"
   void app_run(void);
 
   void task_func_air_signals(void* arg);
-  void task_func_rs422(void* arg);
+  void task_func_serial(void* arg);
   void task_func_idle(void* arg);
   void task_func_gnss(void* arg);
   void task_func_mti(void* arg);
@@ -39,8 +39,8 @@ extern "C"
 //--------------------------------------
 // версия ПО
 const uint8_t MajVersion = 0;
-const uint8_t MinVersion = 1;
-const uint8_t Build = 2;
+const uint8_t MinVersion = 2;
+const uint8_t Build = 1;
 //--------------------------------------
 
 
@@ -75,8 +75,8 @@ typedef union
 } bins_status_t;
 extern volatile bins_status_t bins_status;
 //--------------------------------------
-enum {RS422_PACKER=0x0, RS422_GNSS_BRIDGE=0x1, RS422_ECHO=0x2, RS422_MTI_BRIDGE=0x3};
-extern volatile uint8_t rs422_mode;
+enum {SERIAL_PACKER=0x0, SERIAL_GNSS_BRIDGE=0x1, SERIAL_ECHO=0x2, SERIAL_MTI_BRIDGE=0x3, SERIAL_NONE=0x4};
+extern volatile uint8_t serial_mode;
 //--------------------------------------
 extern volatile uint32_t systime;
 //--------------------------------------
@@ -92,16 +92,12 @@ extern char nmea_string[];
 
 //--------------------------------------
 extern TaskHandle_t task_air_signals;
-extern TaskHandle_t task_rs422;
+extern TaskHandle_t task_serial;
 extern TaskHandle_t task_idle;
 extern TaskHandle_t task_gnss;
 extern TaskHandle_t task_mti;
 //--------------------------------------
 
 
-//--------------------------------------
-//extern bool stat_pres_err;
-//extern bool full_pres_err;
-//--------------------------------------
 
 #endif //  __cplusplus
